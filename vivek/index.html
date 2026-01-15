@@ -9,36 +9,40 @@
 
 <style>
 body {
-  background: #f5f7fb;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont;
+  background:#f5f7fb;
+  font-family:system-ui,-apple-system,BlinkMacSystemFont;
 }
 
 .card {
-  max-width: 760px;   /* wider */
-  margin: 40px auto;
-  border-radius: 14px;
-  border: none;
-  box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+  max-width:800px;
+  margin:40px auto;
+  border-radius:16px;
+  border:none;
+  box-shadow:0 12px 28px rgba(0,0,0,0.08);
 }
 
 .clock {
-  font-size: 2.4rem;
-  font-weight: 600;
-  letter-spacing: 1px;
+  font-size:2.5rem;
+  font-weight:700;
+  letter-spacing:1px;
 }
 
-.sub {
-  color: #6c757d;
-  font-size: 0.9rem;
-}
+.sub { color:#6c757d; }
 
 #timer {
   display:none;
-  font-size:1.2rem;
+  font-size:1.3rem;
+  font-weight:600;
 }
 
-table {
-  font-size: 0.85rem;
+.badge-time {
+  background:#eef2ff;
+  color:#3730a3;
+}
+
+.table td, .table th {
+  vertical-align:middle;
+  white-space:nowrap;
 }
 </style>
 </head>
@@ -53,7 +57,7 @@ table {
 
   <div id="timer" class="text-primary mt-1">00:00:00.000</div>
 
-  <div class="mt-3">
+  <div class="mt-3 d-flex justify-content-center gap-3">
     <button id="outBtn" class="btn btn-outline-danger btn-lg px-5">Out</button>
     <button id="inBtn" class="btn btn-outline-success btn-lg px-5 d-none">In</button>
   </div>
@@ -62,11 +66,11 @@ table {
 
   <hr>
 
-  <h6 class="mb-2">Last 10 Breaks</h6>
+  <h6 class="mb-3">Last 10 Breaks</h6>
 
   <div class="table-responsive">
-    <table class="table table-sm table-striped align-middle">
-      <thead>
+    <table class="table table-sm table-hover align-middle">
+      <thead class="table-light">
         <tr>
           <th>Out</th>
           <th>In</th>
@@ -81,22 +85,21 @@ table {
 
 <script>
 /* CONFIG */
-const USER_NAME = "Vivek";   // change for Sapna
+const USER_NAME = "Vivek"; // change for Sapna
 const API_URL = "https://script.google.com/macros/s/AKfycbwxzDHrkVACW3Yhck9AFHkLh8m2zPNghQj1vdyYwNHVG1tsv6M4SJI1GwUUpCpWYzKpzw/exec";
 
 document.getElementById("userName").innerText = USER_NAME;
 
 /* Digital Clock */
-function updateClock() {
-  const now = new Date(new Date().toLocaleString("en-US",{timeZone:"Asia/Kolkata"}));
+function updateClock(){
+  const now=new Date(new Date().toLocaleString("en-US",{timeZone:"Asia/Kolkata"}));
   document.getElementById("digitalClock").innerText =
     now.toLocaleTimeString("en-IN",{hour12:false});
 }
-setInterval(updateClock,1000);
-updateClock();
+setInterval(updateClock,1000); updateClock();
 
 /* Timer */
-let startPerf=0, timerInt=null;
+let startPerf=0,timerInt=null;
 const timerDiv=document.getElementById("timer");
 
 function formatDuration(ms){
@@ -141,20 +144,18 @@ async function send(action){
   }
 }
 
-/* Buttons */
-
-outBtn.onclick=async()=>{
-  startTimer();                     // start instantly
+outBtn.onclick=()=>{
+  startTimer();
   outBtn.classList.add("d-none");
   inBtn.classList.remove("d-none");
-  send("out");                      // send in background
+  send("out");
 };
 
 inBtn.onclick=()=>{
-  stopTimer();                      // stop instantly (no delay)
+  stopTimer();
   inBtn.classList.add("d-none");
   outBtn.classList.remove("d-none");
-  send("in");                       // send in background
+  send("in");
 };
 
 /* Helpers */
@@ -164,38 +165,38 @@ function formatDate(val){
   const d=new Date(val);
   if(isNaN(d)) return val;
   return d.toLocaleString("en-IN",{
-    day:"2-digit",
-    month:"short",
-    year:"numeric",
-    hour:"2-digit",
-    minute:"2-digit",
-    second:"2-digit",
+    day:"2-digit",month:"short",year:"numeric",
+    hour:"2-digit",minute:"2-digit",second:"2-digit",
     hour12:false
   });
 }
 
+/* MAIN FIX: duration normalizer */
 function normalizeDuration(val){
   if(!val) return "";
 
   // correct string from sheet
-  if(typeof val === "string" && val.includes(":")) {
+  if(typeof val==="string" && val.match(/^\\d{2}:\\d{2}:\\d{2}\\.\\d{3}$/)){
     return val;
   }
 
-  // old date-based duration
-  const d=new Date(val);
-  if(isNaN(d)) return val;
+  // ISO string like 1899-12-29T18:39:19.000Z
+  if(typeof val==="string" && val.includes("T")){
+    const d=new Date(val);
+    if(!isNaN(d)){
+      const ms =
+        d.getUTCHours()*3600000 +
+        d.getUTCMinutes()*60000 +
+        d.getUTCSeconds()*1000 +
+        d.getUTCMilliseconds();
+      return formatDuration(ms);
+    }
+  }
 
-  const h=d.getUTCHours();
-  const m=d.getUTCMinutes();
-  const s=d.getUTCSeconds();
-  const ms=d.getUTCMilliseconds();
-
-  return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}.${String(ms).padStart(3,'0')}`;
+  return val;
 }
 
 /* JSONP logs */
-
 function loadLogs(){
   const cb="cb_"+Math.random().toString(36).slice(2);
   const s=document.createElement("script");
@@ -204,11 +205,12 @@ function loadLogs(){
     const body=document.getElementById("logs");
     body.innerHTML="";
     data.forEach(r=>{
+      const dur=normalizeDuration(r[3]);
       body.innerHTML+=`
       <tr>
         <td>${formatDate(r[1])}</td>
         <td>${formatDate(r[2])}</td>
-        <td>${normalizeDuration(r[3])}</td>
+        <td><span class="badge badge-time">${dur}</span></td>
       </tr>`;
     });
     delete window[cb];
