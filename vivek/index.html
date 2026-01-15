@@ -8,12 +8,12 @@
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
 
 <style>
-body {
+body{
   background:#f5f7fb;
   font-family:system-ui,-apple-system,BlinkMacSystemFont;
 }
 
-.card {
+.card{
   max-width:800px;
   margin:40px auto;
   border-radius:16px;
@@ -21,27 +21,26 @@ body {
   box-shadow:0 12px 28px rgba(0,0,0,0.08);
 }
 
-.clock {
+.clock{
   font-size:2.5rem;
   font-weight:700;
   letter-spacing:1px;
 }
 
-.sub { color:#6c757d; }
+.sub{ color:#6c757d; }
 
-#timer {
+#timer{
   display:none;
   font-size:1.3rem;
   font-weight:600;
 }
 
-.badge-time {
+.badge-time{
   background:#eef2ff;
   color:#3730a3;
 }
 
-.table td, .table th {
-  vertical-align:middle;
+.table td,.table th{
   white-space:nowrap;
 }
 </style>
@@ -85,18 +84,20 @@ body {
 
 <script>
 /* CONFIG */
-const USER_NAME = "Vivek"; // change for Sapna
-const API_URL = "https://script.google.com/macros/s/AKfycbwxzDHrkVACW3Yhck9AFHkLh8m2zPNghQj1vdyYwNHVG1tsv6M4SJI1GwUUpCpWYzKpzw/exec";
+const USER_NAME = "Vivek";   // change to Sapna
+const API_URL = "https://script.google.com/macros/s/AKfycbzkCA-O1cpV-b0CxHnaq_37GjKIldBfTWaetZwHbnufcgf6D4Aj9-ZU2fmgtvr4RvC9LA/exec";
 
+/* Init */
 document.getElementById("userName").innerText = USER_NAME;
 
-/* Digital Clock */
+/* Digital clock */
 function updateClock(){
   const now=new Date(new Date().toLocaleString("en-US",{timeZone:"Asia/Kolkata"}));
   document.getElementById("digitalClock").innerText =
     now.toLocaleTimeString("en-IN",{hour12:false});
 }
-setInterval(updateClock,1000); updateClock();
+setInterval(updateClock,1000);
+updateClock();
 
 /* Timer */
 let startPerf=0,timerInt=null;
@@ -123,7 +124,7 @@ function stopTimer(){
   timerDiv.style.display="none";
 }
 
-/* POST */
+/* POST (no-cors) */
 async function send(action){
   document.getElementById("status").innerText="Saving...";
   try{
@@ -144,6 +145,7 @@ async function send(action){
   }
 }
 
+/* Buttons */
 outBtn.onclick=()=>{
   startTimer();
   outBtn.classList.add("d-none");
@@ -171,29 +173,23 @@ function formatDate(val){
   });
 }
 
-/* MAIN FIX: duration normalizer */
+/* 🔥 FINAL duration fix (timezone-safe) */
 function normalizeDuration(val){
   if(!val) return "";
 
-  // Already correct string from sheet
-  if(typeof val === "string" && /^\d{2}:\d{2}:\d{2}\.\d{3}$/.test(val)){
+  // Already plain text from new rows
+  if(typeof val==="string" && /^\d{2}:\d{2}:\d{2}\.\d{3}$/.test(val)){
     return val;
   }
 
-  // ISO string like 1899-12-29T18:39:31.000Z
-  if(typeof val === "string" && val.includes("T")){
-    const d = new Date(val);
-    if(!isNaN(d)){
-      const totalMs =
-        d.getUTCMinutes() * 60 * 1000 +
-        d.getUTCSeconds() * 1000 +
-        d.getUTCMilliseconds();
+  const d=new Date(val);
+  if(isNaN(d)) return val;
 
-      return formatDuration(totalMs);
-    }
-  }
+  // Subtract Google Sheets base date (1899-12-30 UTC)
+  const base = Date.UTC(1899,11,30,0,0,0,0);
+  const totalMs = d.getTime() - base;
 
-  return val;
+  return formatDuration(totalMs);
 }
 
 /* JSONP logs */
@@ -205,12 +201,11 @@ function loadLogs(){
     const body=document.getElementById("logs");
     body.innerHTML="";
     data.forEach(r=>{
-      const dur=normalizeDuration(r[3]);
       body.innerHTML+=`
       <tr>
         <td>${formatDate(r[1])}</td>
         <td>${formatDate(r[2])}</td>
-        <td><span class="badge badge-time">${dur}</span></td>
+        <td><span class="badge badge-time">${normalizeDuration(r[3])}</span></td>
       </tr>`;
     });
     delete window[cb];
