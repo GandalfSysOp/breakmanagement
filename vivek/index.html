@@ -177,17 +177,23 @@ function formatDate(val){
 function normalizeDuration(val){
   if(!val) return "";
 
-  // Already plain text from new rows
-  if(typeof val==="string" && /^\d{2}:\d{2}:\d{2}\.\d{3}$/.test(val)){
+  // Case 1: already correct text
+  if(typeof val === "string" && /^\d{2}:\d{2}:\d{2}\.\d{3}$/.test(val)){
     return val;
   }
 
-  const d=new Date(val);
+  const d = new Date(val);
   if(isNaN(d)) return val;
 
-  // Subtract Google Sheets base date (1899-12-30 UTC)
-  const base = Date.UTC(1899,11,30,0,0,0,0);
-  const totalMs = d.getTime() - base;
+  // Google Sheets base date (UTC)
+  const base = Date.UTC(1899, 11, 30, 0, 0, 0, 0);
+
+  let totalMs = d.getTime() - base;
+
+  // 🔧 Fix negative values caused by timezone / legacy rows
+  if (totalMs < 0) {
+    totalMs = Math.abs(totalMs);
+  }
 
   return formatDuration(totalMs);
 }
