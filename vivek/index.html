@@ -4,31 +4,45 @@
 <meta charset="UTF-8">
 <title>Break Management</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-
-
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-
 
 <style>
 body { background:#f4f6f9; }
 .card { margin-top:40px; }
 #timer { font-size:1.6rem; display:none; }
 
-
-.clock {
-width:160px; height:160px;
-border:6px solid #333;
-border-radius:50%;
-position:relative;
-margin:10px auto;
+.analog-clock {
+  width:200px;
+  height:200px;
+  border:6px solid #222;
+  border-radius:50%;
+  margin:15px auto;
+  position:relative;
+  background:white;
 }
-.hand { position:absolute; width:50%; height:2px; background:#000; top:50%; transform-origin:100%; }
-.hour { height:4px; }
-.second { background:red; }
+
+.number {
+  position:absolute;
+  font-weight:bold;
+  transform: translate(-50%, -50%);
+}
+
+.hand {
+  position:absolute;
+  width:50%;
+  height:3px;
+  background:#000;
+  top:50%;
+  left:50%;
+  transform-origin:0% 50%;
+}
+
+.hour { height:5px; width:35%; }
+.minute { height:4px; width:45%; }
+.second { background:red; height:2px; width:48%; }
 </style>
 </head>
 <body>
-
 
 <div class="container">
 <div class="row justify-content-center">
@@ -36,27 +50,21 @@ margin:10px auto;
 <div class="card shadow">
 <div class="card-body text-center">
 
-
 <h3 id="userName"></h3>
-<div id="digitalClock" class="text-muted mb-2"></div>
+<div id="digitalClock" class="text-muted"></div>
 
-
-<div class="clock">
-<div class="hand hour" id="hourHand"></div>
-<div class="hand minute" id="minuteHand"></div>
-<div class="hand second" id="secondHand"></div>
+<div class="analog-clock" id="clock">
+  <div class="hand hour" id="hourHand"></div>
+  <div class="hand minute" id="minuteHand"></div>
+  <div class="hand second" id="secondHand"></div>
 </div>
 
+<div id="timer" class="text-primary">00:00:00.000</div>
 
-<div id="timer" class="text-primary mb-2">00:00:00.000</div>
-
-
-<button id="outBtn" class="btn btn-danger btn-lg px-5">Out</button>
-<button id="inBtn" class="btn btn-success btn-lg px-5 d-none">In</button>
-
+<button id="outBtn" class="btn btn-danger btn-lg px-5 mt-2">Out</button>
+<button id="inBtn" class="btn btn-success btn-lg px-5 mt-2 d-none">In</button>
 
 <div id="status" class="mt-2"></div>
-
 
 <hr>
 <h5>Last 10 Logs</h5>
@@ -65,13 +73,90 @@ margin:10px auto;
 <tbody id="logs"></tbody>
 </table>
 
-
 </div></div></div></div></div>
 
-
 <script>
-const USER_NAME = "Vivek";
-const API_URL = "https://script.google.com/macros/s/AKfycbzHA0iWeBCZvRo0evgr5fK94DqAE2sqgijXJ9kZU-YbbkJqHBXWD6yEALpmVPyM6kiRJA/exec";
+const USER_NAME = "Vivek";   // change
+const API_URL = "https://script.google.com/macros/s/AKfycbzqctpb-BR16rd3xb-1Ll5H30UzKeR2639g_RVO_aYsfOmUBiLbZbAY9dXWJIUY97b1LQ/exec";
 
+document.getElementById('userName').innerText = USER_NAME;
 
+// Add numbers to clock
+const clock = document.getElementById('clock');
+for(let i=1;i<=12;i++){
+  const n=document.createElement('div');
+  n.className='number';
+  const angle=i*30;
+  const r=85;
+  n.style.left = 100 + r*Math.sin(angle*Math.PI/180) + 'px';
+  n.style.top  = 100 - r*Math.cos(angle*Math.PI/180) + 'px';
+  n.innerText=i;
+  clock.appendChild(n);
+}
+
+function updateClock(){
+  const now = new Date(new Date().toLocaleString('en-US',{timeZone:'Asia/Kolkata'}));
+
+  document.getElementById('digitalClock').innerText = 'New Delhi: ' + now.toLocaleString();
+
+  const s=now.getSeconds();
+  const m=now.getMinutes();
+  const h=now.getHours()%12;
+
+  document.getElementById('secondHand').style.transform = `rotate(${s*6}deg)`;
+  document.getElementById('minuteHand').style.transform = `rotate(${m*6}deg)`;
+  document.getElementById('hourHand').style.transform = `rotate(${h*30 + m/2}deg)`;
+}
+setInterval(updateClock,1000);
+updateClock();
+
+let startPerf, timerInt;
+const timerDiv=document.getElementById('timer');
+
+function fmt(ms){
+ const h=Math.floor(ms/3600000);
+ const m=Math.floor((ms%3600000)/60000);
+ const s=Math.floor((ms%60000)/1000);
+ const ms2=Math.floor(ms%1000);
+ return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}.${String(ms2).padStart(3,'0')}`;
+}
+
+function startTimer(){
+ startPerf=performance.now();
+ timerDiv.style.display='block';
+ timerInt=setInterval(()=>{
+  timerDiv.innerText=fmt(performance.now()-startPerf);
+ },10);
+}
+
+function stopTimer(){ clearInterval(timerInt); timerDiv.style.display='none'; }
+
+async function send(action){
+ document.getElementById('status').innerText='Sending...';
+ try{
+  const r=await fetch(API_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:USER_NAME,action,timestamp:new Date().toISOString()})});
+  if(!r.ok) throw 0;
+  document.getElementById('status').innerText='✓ Recorded';
+  loadLogs();
+ }catch{
+  document.getElementById('status').innerText='❌ Failed';
+ }
+}
+
+outBtn.onclick=async()=>{ await send('out'); outBtn.classList.add('d-none'); inBtn.classList.remove('d-none'); startTimer(); };
+inBtn.onclick=async()=>{ await send('in'); inBtn.classList.add('d-none'); outBtn.classList.remove('d-none'); stopTimer(); };
+
+async function loadLogs(){
+ const r=await fetch(`${API_URL}?action=logs&name=${USER_NAME}`);
+ const data=await r.json();
+ const body=document.getElementById('logs');
+ body.innerHTML='';
+ data.forEach(row=>{
+  body.innerHTML+=`<tr><td>${row[1]||''}</td><td>${row[2]||''}</td><td>${row[3]||''}</td></tr>`;
+ });
+}
+
+loadLogs();
+</script>
+</body>
 </html>
