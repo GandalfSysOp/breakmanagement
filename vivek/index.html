@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Clock In Out</title>
+<style>
+body { font-family: Arial; text-align: center; padding-top: 40px; }
+#clock { font-size: 24px; margin-bottom: 20px; }
+#timer { font-size: 22px; margin: 15px; display:none; }
+button { font-size: 22px; padding: 12px 40px; margin: 10px; }
+</style>
+</head>
+<body>
+
+
+<h2 id="user"></h2>
+<div id="clock"></div>
+<div id="timer">00:00:00.000</div>
+
+
+<button id="outBtn">Out</button>
+<button id="inBtn" style="display:none">In</button>
+
+
+<script>
+const USER_NAME = "Vivek"; // change for Vivek
+const API_URL = "https://script.google.com/macros/s/AKfycbyEPmCeIoHN27OsO7RnclPAIQ5HsYkcILZkR0OnqAoY-UdjCXrxQq0Iw88JSLI3SUZC1Q/exec";
+
+
+let startTime = null;
+let timerInterval = null;
+
+
+const outBtn = document.getElementById('outBtn');
+const inBtn = document.getElementById('inBtn');
+const timerDiv = document.getElementById('timer');
+
+
+document.getElementById('user').innerText = USER_NAME;
+
+
+function updateClock() {
+const now = new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" });
+document.getElementById('clock').innerText = "Current Time (Delhi): " + now;
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+
+function formatDuration(ms) {
+const h = Math.floor(ms / 3600000);
+const m = Math.floor((ms % 3600000) / 60000);
+const s = Math.floor((ms % 60000) / 1000);
+const ms2 = ms % 1000;
+return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}.${String(ms2).padStart(3,'0')}`;
+}
+
+
+function startTimer() {
+startTime = performance.now();
+timerDiv.style.display = 'block';
+timerInterval = setInterval(() => {
+const elapsed = performance.now() - startTime;
+timerDiv.innerText = formatDuration(elapsed);
+}, 10);
+}
+
+
+function stopTimer() {
+clearInterval(timerInterval);
+timerDiv.style.display = 'none';
+}
+
+
+function send(action) {
+fetch(API_URL, {
+method: 'POST',
+</html>
