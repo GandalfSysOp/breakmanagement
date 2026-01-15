@@ -175,21 +175,21 @@ function formatDate(val){
 function normalizeDuration(val){
   if(!val) return "";
 
-  // correct string from sheet
-  if(typeof val==="string" && val.match(/^\\d{2}:\\d{2}:\\d{2}\\.\\d{3}$/)){
+  // Already correct string from sheet
+  if(typeof val === "string" && /^\d{2}:\d{2}:\d{2}\.\d{3}$/.test(val)){
     return val;
   }
 
-  // ISO string like 1899-12-29T18:39:19.000Z
-  if(typeof val==="string" && val.includes("T")){
-    const d=new Date(val);
+  // ISO string like 1899-12-29T18:39:31.000Z
+  if(typeof val === "string" && val.includes("T")){
+    const d = new Date(val);
     if(!isNaN(d)){
-      const ms =
-        d.getUTCHours()*3600000 +
-        d.getUTCMinutes()*60000 +
-        d.getUTCSeconds()*1000 +
+      const totalMs =
+        d.getUTCMinutes() * 60 * 1000 +
+        d.getUTCSeconds() * 1000 +
         d.getUTCMilliseconds();
-      return formatDuration(ms);
+
+      return formatDuration(totalMs);
     }
   }
 
