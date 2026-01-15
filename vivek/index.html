@@ -14,7 +14,7 @@ body {
 }
 
 .card {
-  max-width: 520px;
+  max-width: 760px;   /* wider */
   margin: 40px auto;
   border-radius: 14px;
   border: none;
@@ -141,21 +141,23 @@ async function send(action){
   }
 }
 
+/* Buttons */
+
 outBtn.onclick=async()=>{
-  await send("out");
+  startTimer();                     // start instantly
   outBtn.classList.add("d-none");
   inBtn.classList.remove("d-none");
-  startTimer();
+  send("out");                      // send in background
 };
 
-inBtn.onclick=async()=>{
-  await send("in");
+inBtn.onclick=()=>{
+  stopTimer();                      // stop instantly (no delay)
   inBtn.classList.add("d-none");
   outBtn.classList.remove("d-none");
-  stopTimer();
+  send("in");                       // send in background
 };
 
-/* Helpers for formatting */
+/* Helpers */
 
 function formatDate(val){
   if(!val) return "";
@@ -175,10 +177,12 @@ function formatDate(val){
 function normalizeDuration(val){
   if(!val) return "";
 
-  // if already formatted
-  if(typeof val==="string" && val.includes(":") && !val.includes("1899"))
+  // correct string from sheet
+  if(typeof val === "string" && val.includes(":")) {
     return val;
+  }
 
+  // old date-based duration
   const d=new Date(val);
   if(isNaN(d)) return val;
 
@@ -191,6 +195,7 @@ function normalizeDuration(val){
 }
 
 /* JSONP logs */
+
 function loadLogs(){
   const cb="cb_"+Math.random().toString(36).slice(2);
   const s=document.createElement("script");
