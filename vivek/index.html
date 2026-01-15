@@ -159,17 +159,18 @@ async function send(action) {
   statusDiv.innerText = "Sending...";
 
   try {
-    const res = await fetch(API_URL, {
+    await fetch(API_URL, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      mode: "no-cors",   // <<< IMPORTANT
+      headers: {
+        "Content-Type": "application/json"
+      },
       body: JSON.stringify({
         name: USER_NAME,
         action: action,
         timestamp: new Date().toISOString()
       })
     });
-
-    if (!res.ok) throw new Error("fail");
 
     statusDiv.innerText = "✓ Recorded";
     loadLogs();
