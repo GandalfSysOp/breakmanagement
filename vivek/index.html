@@ -14,7 +14,7 @@ body{
 }
 
 .card{
-  max-width:800px;
+  max-width:820px;
   margin:40px auto;
   border-radius:16px;
   border:none;
@@ -83,16 +83,18 @@ body{
 </div>
 
 <script>
-/* CONFIG */
-const USER_NAME = "Vivek";   // change to Sapna
-const API_URL = "https://script.google.com/macros/s/AKfycbzkCA-O1cpV-b0CxHnaq_37GjKIldBfTWaetZwHbnufcgf6D4Aj9-ZU2fmgtvr4RvC9LA/exec";
+/* ================= CONFIG ================= */
 
-/* Init */
+const USER_NAME = "Vivek";        // change to Sapna on other page
+const API_URL   = "PASTE_YOUR_SCRIPT_URL_HERE";
+
+/* ========================================== */
+
 document.getElementById("userName").innerText = USER_NAME;
 
 /* Digital clock */
 function updateClock(){
-  const now=new Date(new Date().toLocaleString("en-US",{timeZone:"Asia/Kolkata"}));
+  const now = new Date(new Date().toLocaleString("en-US",{timeZone:"Asia/Kolkata"}));
   document.getElementById("digitalClock").innerText =
     now.toLocaleTimeString("en-IN",{hour12:false});
 }
@@ -100,33 +102,34 @@ setInterval(updateClock,1000);
 updateClock();
 
 /* Timer */
-let startPerf=0,timerInt=null;
-const timerDiv=document.getElementById("timer");
+let startPerf = 0;
+let timerInt = null;
+const timerDiv = document.getElementById("timer");
 
 function formatDuration(ms){
-  const h=Math.floor(ms/3600000);
-  const m=Math.floor((ms%3600000)/60000);
-  const s=Math.floor((ms%60000)/1000);
-  const ms2=Math.floor(ms%1000);
+  const h = Math.floor(ms/3600000);
+  const m = Math.floor((ms%3600000)/60000);
+  const s = Math.floor((ms%60000)/1000);
+  const ms2 = Math.floor(ms%1000);
   return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}.${String(ms2).padStart(3,'0')}`;
 }
 
 function startTimer(){
-  startPerf=performance.now();
-  timerDiv.style.display="block";
-  timerInt=setInterval(()=>{
-    timerDiv.innerText=formatDuration(performance.now()-startPerf);
+  startPerf = performance.now();
+  timerDiv.style.display = "block";
+  timerInt = setInterval(()=>{
+    timerDiv.innerText = formatDuration(performance.now() - startPerf);
   },10);
 }
 
 function stopTimer(){
   clearInterval(timerInt);
-  timerDiv.style.display="none";
+  timerDiv.style.display = "none";
 }
 
-/* POST (no-cors) */
+/* POST to Google Sheets */
 async function send(action){
-  document.getElementById("status").innerText="Saving...";
+  document.getElementById("status").innerText = "Saving...";
   try{
     await fetch(API_URL,{
       method:"POST",
@@ -138,33 +141,34 @@ async function send(action){
         timestamp:new Date().toISOString()
       })
     });
-    document.getElementById("status").innerText="✓ Saved";
+    document.getElementById("status").innerText = "✓ Saved";
     loadLogs();
   }catch{
-    document.getElementById("status").innerText="❌ Failed";
+    document.getElementById("status").innerText = "❌ Failed";
   }
 }
 
 /* Buttons */
-outBtn.onclick=()=>{
-  startTimer();
+
+outBtn.onclick = ()=>{
+  startTimer();                      // instant UI
   outBtn.classList.add("d-none");
   inBtn.classList.remove("d-none");
-  send("out");
+  send("out");                       // background save
 };
 
-inBtn.onclick=()=>{
-  stopTimer();
+inBtn.onclick = ()=>{
+  stopTimer();                       // instant UI
   inBtn.classList.add("d-none");
   outBtn.classList.remove("d-none");
-  send("in");
+  send("in");                        // background save
 };
 
 /* Helpers */
 
 function formatDate(val){
   if(!val) return "";
-  const d=new Date(val);
+  const d = new Date(val);
   if(isNaN(d)) return val;
   return d.toLocaleString("en-IN",{
     day:"2-digit",month:"short",year:"numeric",
@@ -173,56 +177,56 @@ function formatDate(val){
   });
 }
 
-/* 🔥 FINAL duration fix (timezone-safe) */
-function normalizeDuration(val){
-  if(!val) return "";
+/* ✅ Bullet-proof duration calculation */
+function computeDuration(outVal, inVal, durationVal){
 
-  // Case 1: already correct text
-  if(typeof val === "string" && /^\d{2}:\d{2}:\d{2}\.\d{3}$/.test(val)){
-    return val;
+  // Use backend text if already clean (new rows)
+  if(typeof durationVal === "string" && /^\d{2}:\d{2}:\d{2}\.\d{3}$/.test(durationVal)){
+    return durationVal;
   }
 
-  const d = new Date(val);
-  if(isNaN(d)) return val;
+  // Otherwise compute from timestamps (old rows)
+  const out = new Date(outVal);
+  const inn = new Date(inVal);
 
-  // Google Sheets base date (UTC)
-  const base = Date.UTC(1899, 11, 30, 0, 0, 0, 0);
+  if(isNaN(out) || isNaN(inn)) return "";
 
-  let totalMs = d.getTime() - base;
+  let diff = inn - out;
+  if(diff < 0) diff = 0;
 
-  // 🔧 Fix negative values caused by timezone / legacy rows
-  if (totalMs < 0) {
-    totalMs = Math.abs(totalMs);
-  }
-
-  return formatDuration(totalMs);
+  return formatDuration(diff);
 }
 
-/* JSONP logs */
-function loadLogs(){
-  const cb="cb_"+Math.random().toString(36).slice(2);
-  const s=document.createElement("script");
+/* JSONP logs loader */
 
-  window[cb]=function(data){
-    const body=document.getElementById("logs");
-    body.innerHTML="";
+function loadLogs(){
+  const cb = "cb_" + Math.random().toString(36).slice(2);
+  const s = document.createElement("script");
+
+  window[cb] = function(data){
+    const body = document.getElementById("logs");
+    body.innerHTML = "";
+
     data.forEach(r=>{
-      body.innerHTML+=`
+      const dur = computeDuration(r[1], r[2], r[3]);
+      body.innerHTML += `
       <tr>
         <td>${formatDate(r[1])}</td>
         <td>${formatDate(r[2])}</td>
-        <td><span class="badge badge-time">${normalizeDuration(r[3])}</span></td>
+        <td><span class="badge badge-time">${dur}</span></td>
       </tr>`;
     });
+
     delete window[cb];
     s.remove();
   };
 
-  s.src=`${API_URL}?action=logs&name=${USER_NAME}&callback=${cb}`;
+  s.src = `${API_URL}?action=logs&name=${USER_NAME}&callback=${cb}`;
   document.body.appendChild(s);
 }
 
 loadLogs();
 </script>
+
 </body>
 </html>
